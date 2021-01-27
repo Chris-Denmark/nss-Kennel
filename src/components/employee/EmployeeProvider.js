@@ -6,6 +6,7 @@ export const EmployeeContext = createContext()
 // This component establishes what data can be used.
 export const EmployeeProvider = (props) => {
     const [employees, setEmployees] = useState([])
+    const [ searchTerms, setSearchTerms ] = useState("")
 
     const getEmployees = () => {
         return fetch("http://localhost:8088/employees?_expand=location")
@@ -36,6 +37,17 @@ export const EmployeeProvider = (props) => {
             .then(getEmployees)
     }
 
+    const updateEmployee = employee => {
+        return fetch(`http://localhost:8088/employees/${employee.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(employee)
+        })
+          .then(getEmployees)
+      }
+
     /*
         You return a context provider which has the
         `animals` state, `getAnimals` function,
@@ -44,7 +56,7 @@ export const EmployeeProvider = (props) => {
     */
     return (
         <EmployeeContext.Provider value={{
-            employees, getEmployees, addEmployee, fireEmployee, getEmployeeById
+            employees, getEmployees, addEmployee, fireEmployee, getEmployeeById, updateEmployee, searchTerms, setSearchTerms
         }}>
             {props.children}
         </EmployeeContext.Provider>

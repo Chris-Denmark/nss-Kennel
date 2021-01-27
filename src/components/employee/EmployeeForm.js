@@ -2,10 +2,10 @@ import React, { useContext, useEffect, useState } from "react"
 import { EmployeeContext } from "./EmployeeProvider"
 import { LocationContext } from "../location/LocationProvider"
 import "./Employee.css"
-import { useHistory } from 'react-router-dom'
+import { useHistory, useParams } from 'react-router-dom'
 
 export const EmployeeForm = () => {
-  const { addEmployee } = useContext(EmployeeContext)
+  const { addEmployee, getEmployeeById, updateEmployee } = useContext(EmployeeContext)
   const { locations, getLocations } = useContext(LocationContext)
 
   /*
@@ -19,15 +19,15 @@ export const EmployeeForm = () => {
     locationId: 0,
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { employeeId } = useParams();
   const history = useHistory();
 
   /*
   Reach out to the world and get customers state
   and locations state on initialization, so we can provide their data in the form dropdowns
   */
-  useEffect(() => {
-    getLocations()
-  }, [])
 
   //when a field changes, update state. The return will re-render and display based on the values in state
       // NOTE! What's happening in this function can be very difficult to grasp. Read it over many times and ask a lot questions about it.
@@ -50,23 +50,48 @@ export const EmployeeForm = () => {
   }
 
   const handleClickSaveEmployee = (event) => {
-    event.preventDefault() //Prevents the browser from submitting the form
-
-    const locationId = employee.locationId
-
-    if (locationId === 0) {
-      window.alert("Please select a location")
+    if (parseInt(employee.locationId) === 0) {
+        window.alert("Please select a location")
     } else {
-      //invoke addAnimal passing animal as an argument.
-      //once complete, change the url and display the animal list
-      addEmployee(employee)
-      .then(() => history.push("/employees"))
+      //disable the button - no extra clicks
+      setIsLoading(true);
+      // This is how we check for whether the form is being used for editing or creating. If the URL that got us here has an id number in it, we know we want to update an existing record of an animal
+      if (employeeId){
+        //PUT - update
+        updateEmployee({
+            id: employee.id,
+            name: employee.name,
+            locationId: parseInt(employee.locationId),
+        })
+        .then(() => history.push(`/employees/detail/${employee.id}`))
+      }else {
+        //POST - add
+        addEmployee({
+            name: employee.name,
+            locationId: parseInt(employee.locationId),
+        })
+        .then(() => history.push("/employees"))
+      }
     }
   }
 
+  useEffect(() => {
+    getLocations().then(() => {
+      if (employeeId) {
+        getEmployeeById(employeeId)
+        .then(employee => {
+            setEmployee(employee)
+            setIsLoading(false)
+        })
+      } else {
+        setIsLoading(false)
+      }
+    })
+  }, [])
+
   return (
     <form className="employeeForm">
-        <h2 className="employeeForm__title">New Employee</h2>
+        <h2 className="employeeForm__title">{employeeId ? "EditEmployee" : "AddEmployee"}</h2>
         <fieldset>
             <div className="form-group">
                 <label htmlFor="name">Employee name:</label>
@@ -87,9 +112,12 @@ export const EmployeeForm = () => {
             </div>
         </fieldset>
         <button className="btn btn-primary"
-          onClick={handleClickSaveEmployee}>
-          Save Employee
-        </button>
+          disabled={isLoading}
+          onClick={event => {
+            event.preventDefault() // Prevent browser from submitting the form and refreshing the page
+            handleClickSaveEmployee()
+          }}>
+        {employeeId ? "Save Employee" : "Add Employee"}</button>
     </form>
   )
 }
